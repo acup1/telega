@@ -1,0 +1,13 @@
+/target
+/.direnv
+/.envrc
+/api-credentials.env
+/result
+/result-*
+/.env
+/.env.*
+.DS_Store
+/vendor/terminalib/.git
+*.session
+*.session-shm
+*.session-wal
