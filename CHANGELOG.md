@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- [x] Publish telega and terminalib over SSH; replace vendored sources with a pinned Git dependency and a verified Nix source hash.
+- [x] Read local API credentials at runtime when Git flakes omit the ignored build-time file, preserving environment and embedded-value precedence.
+
 - [x] License telega under GNU GPL v3 and align Cargo/Nix metadata.
 
 - [x] Focus the composer and place its cursor on the first click, including border/padding; dismiss blocking message/search/reaction menus while preserving action button hitboxes.

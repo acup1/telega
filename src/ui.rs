@@ -6185,10 +6185,9 @@ mod tests {
 
     #[test]
     fn all_visible_images_survive_the_per_frame_upload_budget() {
-        let image = media::MemoryImage::from_png(
-            include_bytes!("../vendor/terminalib/tests/imgs/err.png").to_vec(),
-        )
-        .unwrap();
+        let image =
+            media::MemoryImage::from_png(include_bytes!("fixtures/terminalib-test.png").to_vec())
+                .unwrap();
         let placements: Vec<_> = (1..=40)
             .map(|message_id| ImagePlacement {
                 message_id,

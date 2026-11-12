@@ -3119,7 +3119,7 @@ mod tests {
 
     #[test]
     fn cached_png_requires_iend_at_the_end_of_the_file() {
-        let image = include_bytes!("../vendor/terminalib/tests/imgs/err.png");
+        let image = include_bytes!("fixtures/terminalib-test.png");
         let path =
             unique_temporary_path(&std::env::temp_dir().join("telega-png-cache.png"), "test");
         let temporary = PendingDownload(path.clone());

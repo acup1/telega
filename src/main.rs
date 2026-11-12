@@ -46,22 +46,23 @@ struct Config {
 
 impl Config {
     fn from_env() -> Result<Self> {
-        let api_id = std::env::var("TG_API_ID")
-            .or_else(|_| {
-                option_env!("TELEGA_BUILD_TG_API_ID")
-                    .map(str::to_owned)
-                    .ok_or(std::env::VarError::NotPresent)
-            })
-            .context("TG_API_ID is not set (create an application at https://my.telegram.org)")?
-            .parse()
-            .context("TG_API_ID must be a number")?;
-        let api_hash = std::env::var("TG_API_HASH")
-            .or_else(|_| {
-                option_env!("TELEGA_BUILD_TG_API_HASH")
-                    .map(str::to_owned)
-                    .ok_or(std::env::VarError::NotPresent)
-            })
-            .context("TG_API_HASH is not set (create an application at https://my.telegram.org)")?;
+        let local_credentials = fs::read_to_string("api-credentials.env").unwrap_or_default();
+        let api_id = credential_value(
+            "TG_API_ID",
+            std::env::var("TG_API_ID").ok(),
+            option_env!("TELEGA_BUILD_TG_API_ID"),
+            &local_credentials,
+        )
+        .context("TG_API_ID is not set (create an application at https://my.telegram.org)")?
+        .parse()
+        .context("TG_API_ID must be a number")?;
+        let api_hash = credential_value(
+            "TG_API_HASH",
+            std::env::var("TG_API_HASH").ok(),
+            option_env!("TELEGA_BUILD_TG_API_HASH"),
+            &local_credentials,
+        )
+        .context("TG_API_HASH is not set (create an application at https://my.telegram.org)")?;
         if api_hash.trim().is_empty() {
             bail!("TG_API_HASH must not be empty");
         }
@@ -89,6 +90,26 @@ impl Config {
             log,
         })
     }
+}
+
+fn credential_value(
+    key: &str,
+    environment: Option<String>,
+    embedded: Option<&str>,
+    local: &str,
+) -> Option<String> {
+    environment
+        .or_else(|| {
+            embedded
+                .filter(|value| !value.trim().is_empty())
+                .map(str::to_owned)
+        })
+        .or_else(|| {
+            local.lines().find_map(|line| {
+                let (name, value) = line.split_once('=')?;
+                (name.trim() == key).then(|| value.trim().to_owned())
+            })
+        })
 }
 
 #[tokio::main]
@@ -238,4 +259,31 @@ fn print_help() {
          r refresh      Esc/q back; quit from All chats without an open chat\n  \
          Mouse:\n  right click message menu · double click reply · click avatar in profile for photos"
     );
+}
+
+#[cfg(test)]
+mod config_tests {
+    use super::*;
+
+    #[test]
+    fn local_credentials_work_when_git_flakes_omit_the_ignored_build_file() {
+        let local = "TG_API_ID=42\nTG_API_HASH=local-hash\n";
+        assert_eq!(
+            credential_value("TG_API_ID", None, Some(""), local).as_deref(),
+            Some("42")
+        );
+        assert_eq!(
+            credential_value("TG_API_HASH", None, None, local).as_deref(),
+            Some("local-hash")
+        );
+        assert_eq!(
+            credential_value("TG_API_ID", Some("99".into()), Some("55"), local).as_deref(),
+            Some("99")
+        );
+        assert_eq!(
+            credential_value("TG_API_ID", None, Some("55"), local).as_deref(),
+            Some("55")
+        );
+        assert!(credential_value("TG_API_ID", None, None, "# TG_API_ID=42\nOTHER=42").is_none());
+    }
 }

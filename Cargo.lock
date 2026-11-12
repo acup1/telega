@@ -1496,6 +1496,7 @@ dependencies = [
 [[package]]
 name = "terminalib"
 version = "0.1.0"
+source = "git+https://github.com/acup1/terminalib.git?rev=4de9f8ee9c15eecea58a2936c13eacc190b61ca7#4de9f8ee9c15eecea58a2936c13eacc190b61ca7"
 dependencies = [
  "base64",
  "libc",

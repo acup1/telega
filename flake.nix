@@ -75,17 +75,13 @@
                   || relative == "build.rs"
                   || relative == "Cargo.lock"
                   || relative == "src"
-                  || pkgs.lib.hasPrefix "src/" relative
-                  || relative == "vendor"
-                  || relative == "vendor/terminalib"
-                  || (pkgs.lib.hasPrefix "vendor/terminalib/" relative
-                    && relative != "vendor/terminalib/.git"
-                    && relative != "vendor/terminalib/target"
-                    && !pkgs.lib.hasPrefix "vendor/terminalib/.git/" relative
-                    && !pkgs.lib.hasPrefix "vendor/terminalib/target/" relative);
+                  || pkgs.lib.hasPrefix "src/" relative;
             };
             cargoLock = {
               lockFile = ./Cargo.lock;
+              outputHashes = {
+                "terminalib-0.1.0" = "sha256-CTHQiSxSgi32gGMeuYtkqerMAbjypoHVGcAyw/8wUU8=";
+              };
             };
             nativeBuildInputs = with pkgs; [
               cmake

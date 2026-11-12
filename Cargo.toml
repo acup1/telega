@@ -7,7 +7,6 @@ description = "Keyboard-first Telegram client for the terminal"
 license = "GPL-3.0-only"
 
 [workspace]
-members = ["vendor/terminalib"]
 resolver = "3"
 
 [dependencies]
@@ -21,7 +20,7 @@ libc = "0.2"
 rpassword = "7.4"
 pulldown-cmark = { version = "0.13", default-features = false }
 syntect = { version = "5.3", default-features = false, features = ["default-syntaxes", "default-themes", "regex-fancy"] }
-terminalib = { path = "vendor/terminalib" }
+terminalib = { git = "https://github.com/acup1/terminalib.git", rev = "4de9f8ee9c15eecea58a2936c13eacc190b61ca7" }
 tokio = { version = "1.47", features = ["fs", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
 unicode-width = "0.2"
 unicode-segmentation = "1.12"
