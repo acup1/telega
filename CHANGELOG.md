@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- [x] Allow saved authorized sessions to start without an API hash; require it only before a new login and document the first-login limitation.
+
 - [x] Publish telega and terminalib over SSH; replace vendored sources with a pinned Git dependency and a verified Nix source hash.
 - [x] Read local API credentials at runtime when Git flakes omit the ignored build-time file, preserving environment and embedded-value precedence.
 

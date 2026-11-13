@@ -211,10 +211,16 @@ impl Telegram {
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 
-    pub async fn authorize(&self, api_hash: &str) -> Result<()> {
+    pub async fn authorize(&self, api_hash: Option<&str>) -> Result<()> {
         if self.client.is_authorized().await? {
             return Ok(());
         }
+        let api_hash = api_hash.filter(|value| !value.trim().is_empty()).context(
+            "Telegram requires both TG_API_ID and TG_API_HASH for a new login. \
+             Use a build with embedded application credentials, or set TG_API_HASH \
+             from your application at https://my.telegram.org. \
+             A saved authorized session does not require TG_API_HASH.",
+        )?;
         println!("First launch: sign in to Telegram.");
         let phone = prompt("Phone number in international format: ")?;
         let token = self

@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 
 use crate::telegram::Telegram;
 
@@ -36,7 +36,7 @@ pub(crate) fn child_stderr() -> std::process::Stdio {
 #[derive(Debug)]
 struct Config {
     api_id: i32,
-    api_hash: String,
+    api_hash: Option<String>,
     session: PathBuf,
     root: PathBuf,
     runtime: PathBuf,
@@ -62,10 +62,7 @@ impl Config {
             option_env!("TELEGA_BUILD_TG_API_HASH"),
             &local_credentials,
         )
-        .context("TG_API_HASH is not set (create an application at https://my.telegram.org)")?;
-        if api_hash.trim().is_empty() {
-            bail!("TG_API_HASH must not be empty");
-        }
+        .filter(|value| !value.trim().is_empty());
 
         let root = std::env::var_os("TELEGA_CACHE")
             .map(PathBuf::from)
@@ -154,7 +151,7 @@ async fn run() -> Result<()> {
     fs::create_dir_all(&config.avatars)?;
 
     let telegram = Telegram::connect(config.api_id, &config.session).await?;
-    telegram.authorize(&config.api_hash).await?;
+    telegram.authorize(config.api_hash.as_deref()).await?;
     let _ = TUI_LOG.set(config.log.clone());
     TUI_STARTED.store(true, Ordering::Relaxed);
     let result = ui::run(telegram, config.runtime.clone(), config.avatars, config.log).await;
@@ -244,7 +241,7 @@ fn print_help() {
     println!(
         "telega — terminal Telegram client\n\n\
          Telegram application (optional when embedded at build time):\n  TG_API_ID       application id from my.telegram.org\n  \
-         TG_API_HASH     application hash from my.telegram.org\n\n\
+         TG_API_HASH     application hash; required only for a new login\n\n\
          Optional environment:\n  TELEGA_SESSION  session database path\n  \
          TELEGA_CACHE    storage root (default: ~/.cache/telega)\n  \
          TELEGA_THEME    theme path, t.me/addtheme link, terminal/classic/day/tinted/night\n  \
