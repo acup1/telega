@@ -78,54 +78,93 @@
 TGP-медиа показывается значок Nerd Font, либо `!`, если Nerd Fonts отключены.
 Над картинками нет служебных подписей image/album/loading.
 
-## Запуск через Nix
+## Установка готового клиента
 
-Создайте Telegram application на <https://my.telegram.org>, затем:
+В готовом клиенте уже есть реквизиты приложения. При первом запуске введите
+номер телефона, код от Telegram и пароль двухэтапной аутентификации, если он включён.
+При следующих запусках клиент использует сессию из `~/.cache/telega/telega.session`.
+
+После публикации [релиза](https://github.com/acup1/telega/releases) запустить клиент
+с медиазависимостями можно одной командой на Linux x86-64, Linux ARM64 и macOS Apple Silicon:
 
 ```sh
-git clone git@github.com:acup1/telega.git
+nix run 'https://github.com/acup1/telega/releases/latest/download/telega-nix.tar.gz'
+```
+
+Если вам передали файл `telega-nix.tar.gz`, перейдите в каталог с ним и выполните
+`nix run "tarball+file://$PWD/telega-nix.tar.gz"`. Nix выберет сборку для вашей системы.
+
+Без Nix скачайте архив для своей платформы из того же релиза. Например, для Linux x86-64:
+
+```sh
+tar -xzf telega-x86_64-linux.tar.gz
+./bin/telega
+```
+
+Для Apple Silicon нужен `telega-aarch64-darwin.tar.gz`, для Linux ARM64 —
+`telega-aarch64-linux.tar.gz`. Для видео и стикеров в обычной установке нужны
+`ffmpeg`, `rsvg-convert` и `python3` с модулем `lottie` в `PATH`.
+Для звука подходит `mpv`, `ffplay` или системный `afplay`.
+
+## Отдельный просмотрщик фото и видео
+
+`tgp-viewer` открывает локальные файлы в терминале и использует тот же код
+отрисовки и воспроизведения, что галерея telega. Для него не нужен аккаунт
+Telegram. Из этого репозитория:
+
+```sh
+nix run .#tgp-viewer -- photo.jpg clip.mp4
+```
+
+В нативном архиве просмотрщика запускайте `./bin/tgp-viewer photo.jpg clip.mp4`.
+Стрелки ← и → переключают файлы, Esc закрывает просмотр. Для картинок и кадров
+видео нужен терминал с Kitty graphics protocol.
+
+## Сборка из исходников
+
+```sh
+git clone https://github.com/acup1/telega.git
 cd telega
-export TG_API_ID=123456
-export TG_API_HASH=0123456789abcdef0123456789abcdef
 nix run .
 ```
 
-Cargo может встроить реквизиты из локального `api-credentials.env` со строками
-`TG_API_ID=...` и `TG_API_HASH=...`. Файл исключён из Git. При запуске Nix из
-Git checkout клиент может прочитать его из текущего каталога при старте.
-Приоритет: переменные окружения, встроенные значения, локальный файл.
+Для своей сборки разработчик указывает реквизиты приложения из
+[my.telegram.org](https://my.telegram.org) в локальном `api-credentials.env`
+(`TG_API_ID=...` и `TG_API_HASH=...`) или в окружении. Файл исключён из Git.
+`nix run .` из Git checkout читает его при запуске из текущего каталога.
+Обычная сборка Cargo — `cargo build --locked --release`. Для сохранённой
+авторизованной сессии достаточно `TG_API_ID`.
 
-Для уже авторизованной сессии достаточно `TG_API_ID`: `TG_API_HASH` при запуске
-не требуется. Для нового входа Telegram требует оба реквизита, в том числе
-при входе через QR ([auth.sendCode](https://core.telegram.org/method/auth.sendCode),
-[auth.exportLoginToken](https://core.telegram.org/method/auth.exportLoginToken)).
-Чтобы пользователям готовой сборки не настраивать реквизиты приложения,
-при её сборке нужно встроить полную пару `TG_API_ID` + `TG_API_HASH`.
-Встроенный hash можно извлечь из бинарника; Nix store также не скрывает
-переданные при сборке реквизиты. Вход в собственный Telegram-аккаунт всё равно нужен.
+## Выпуск готовой сборки
 
-`terminalib` загружается из Git и закреплён на конкретном коммите.
-Версия зависимости записана в Cargo.lock; Nix также проверяет хеш её исходников.
+Чтобы собрать архив для своей платформы, задайте пару приложения и выполните
+`scripts/package-release.sh`. Архив и его SHA-256 появятся в `target/dist/`.
+Режим сборки `bundled-app` проверяет наличие обоих реквизитов.
+Встроенный `api_hash` можно извлечь из распространяемого бинарника.
 
-При первом запуске клиент спросит телефон, код и, если включена, 2FA-пароль.
-Сессия хранится в `~/.cache/telega/telega.session`. `mpv`, `ffmpeg`,
-рендерер Lottie и SVG входят в Nix closure — ставить их отдельно не нужно.
+Пара `api_id` и `api_hash` идентифицирует приложение перед Telegram.
+Для доступа к переписке требуется ещё авторизация пользователя или его
+действующая сессия. Если пара станет общедоступной, другие программы смогут
+использовать идентификатор telega, а ограничения на новые входы затронут и
+пользователей клиента. Штатного отзыва hash у разработчика нет.
+[Авторизация Telegram](https://core.telegram.org/api/auth) ·
+[Рекомендации Telethon для авторов приложений](https://docs.telethon.dev/en/v2/basic/signing-in.html).
 
-Проверить установку без авторизации:
+В [tgt](https://github.com/FedericoBruzzone/tgt/issues/63) пользователи
+столкнулись с `API_ID_PUBLISHED_FLOOD`; точную причину Telegram не подтвердил.
+В [пакете Telegram Desktop для Arch](https://github.com/telegramdesktop/tdesktop/issues/4717)
+та же ошибка блокировала вход при использовании общедоступной тестовой пары.
+Для релизов telega используйте собственную пару из Actions Secrets.
+Сборщики форков могут использовать свою пару. QR-вход тоже требует оба
+значения. [Регистрация приложения](https://core.telegram.org/api/obtaining_api_id) ·
+[Вход по QR](https://core.telegram.org/method/auth.exportLoginToken).
 
-```sh
-nix run . -- --help
-```
-
-## Обычная сборка
-
-```sh
-cargo build --release
-```
-
-Для медиавозможностей в `PATH` должны быть `ffmpeg`, `rsvg-convert` и
-`python3` с модулем `lottie`. В Nix это окружение уже включено; Matplotlib и TeX не нужны.
-Для звука подходит `mpv`, `ffplay` или системный `afplay`.
+Для выпуска на GitHub владелец репозитория задаёт два Actions secrets,
+`TG_API_ID` и `TG_API_HASH`, и отправляет тег вида `v0.1.0` на коммит с workflow.
+После сборки всех трёх архивов workflow публикует их вместе с Nix-пакетом и
+`SHA256SUMS` в одном релизе. Пользователям этого релиза достаточно войти в свой аккаунт.
+Тег вида `viewer-v0.1.0` выпускает только просмотрщик и его Nix-пакет
+`tgp-viewer-nix.tar.gz`. Для этого тега Actions Secrets не нужны.
 
 ## Управление
 

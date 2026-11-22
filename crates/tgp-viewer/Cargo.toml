@@ -1,0 +1,13 @@
+[package]
+name = "tgp-viewer"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "Terminal image gallery and video player using the Kitty graphics protocol"
+license = "GPL-3.0-only"
+
+[dependencies]
+anyhow = "1.0"
+libc = "0.2"
+terminalib.workspace = true
+tokio = { version = "1.47", features = ["macros", "rt", "time"] }

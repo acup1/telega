@@ -1,0 +1,101 @@
+name: Publish release
+
+on:
+  push:
+    tags: ['v[0-9]*', 'viewer-v[0-9]*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            system: x86_64-linux
+          - runner: ubuntu-22.04-arm
+            system: aarch64-linux
+          - runner: macos-15
+            system: aarch64-darwin
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check client release configuration
+        if: ${{ !startsWith(github.ref_name, 'viewer-') }}
+        env:
+          HAS_API_ID: ${{ secrets.TG_API_ID != '' }}
+          HAS_API_HASH: ${{ secrets.TG_API_HASH != '' }}
+        run: |
+          if [[ "$HAS_API_ID" != true || "$HAS_API_HASH" != true ]]; then
+            echo '::error::Client releases require TG_API_ID and TG_API_HASH in Settings > Secrets and variables > Actions > Repository secrets.'
+            exit 1
+          fi
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test viewer without application credentials
+        run: cargo test --locked -p tgp-viewer
+      - name: Build and check standalone viewer
+        run: scripts/package-release.sh dist tgp-viewer
+      - name: Build and check Telegram client
+        if: ${{ !startsWith(github.ref_name, 'viewer-') }}
+        env:
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
+        run: scripts/package-release.sh dist telega
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: telega-${{ matrix.system }}
+          path: |
+            dist/telega-${{ matrix.system }}.tar.gz
+            dist/tgp-viewer-${{ matrix.system }}.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: telega-*
+          path: assets
+          merge-multiple: true
+      - name: Package Nix launcher and calculate checksums
+        run: |
+          case "$GITHUB_REF_NAME" in
+            viewer-*) ;;
+            *) python3 scripts/release-flake.py assets "$GITHUB_REF_NAME" ;;
+          esac
+          python3 scripts/release-flake.py assets "$GITHUB_REF_NAME" --program tgp-viewer
+          cd assets
+          sha256sum -- *.tar.gz > SHA256SUMS
+      - name: Publish all archives together
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if draft=$(gh release view "$tag" --json isDraft --jq .isDraft); then
+            if [ "$draft" != true ]; then
+              echo "Release $tag has already been published." >&2
+              exit 1
+            fi
+          else
+            gh release create "$tag" --verify-tag --draft --title "$tag" --generate-notes
+          fi
+          gh release upload "$tag" assets/*.tar.gz assets/SHA256SUMS --clobber
+          case "$tag" in
+            viewer-*) gh release edit "$tag" --draft=false --latest=false ;;
+            *) gh release edit "$tag" --draft=false --latest ;;
+          esac

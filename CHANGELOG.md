@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- [x] Extract image display, video decoding, playback controls and terminal overlays into the standalone `tgp-viewer` app and Rust library. Build Linux, macOS and Nix releases for the viewer independently of Telegram.
+- [x] Explain Telegram application credential restrictions at login when the API rejects this build.
+- [x] Package release builds with application credentials so first-time users can sign in with just their Telegram account. Add native Linux and macOS archives and a Nix launcher.
+
 - [x] Allow saved authorized sessions to start without an API hash; require it only before a new login and document the first-login limitation.
 
 - [x] Publish telega and terminalib over SSH; replace vendored sources with a pinned Git dependency and a verified Nix source hash.

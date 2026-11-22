@@ -15,54 +15,11 @@
       packages = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
-          mpvBase = pkgs.mpv-unwrapped.override {
-            archiveSupport = false;
-            bluraySupport = false;
-            cacaSupport = false;
-            cmsSupport = false;
-            curlSupport = false;
-            dvdnavSupport = false;
-            javascriptSupport = false;
-            openalSupport = false;
-            rubberbandSupport = false;
-            vdpauSupport = false;
-            vulkanSupport = false;
-            zimgSupport = false;
-          };
-          terminalMpv = if pkgs.stdenv.hostPlatform.isDarwin then
-            mpvBase.overrideAttrs (old: {
-              nativeBuildInputs = builtins.filter
-                (input: input != pkgs.swift)
-                old.nativeBuildInputs;
-              mesonFlags = old.mesonFlags ++ [
-                "-Dcocoa=disabled"
-                "-Dswift-build=disabled"
-                "-Dcoreaudio=enabled"
-                "-Davfoundation=disabled"
-              ];
-              postBuild = "";
-              postInstall = ''
-                mkdir -p $out/share/mpv
-                ln -s ${pkgs.freefont_ttf}/share/fonts/truetype/FreeSans.ttf \
-                  $out/share/mpv/subfont.ttf
-                cp ../TOOLS/mpv_identify.sh ../TOOLS/umpv $out/bin/
-              '';
-            })
-          else mpvBase;
-          runtime = with pkgs; [
-            ffmpeg
-            librsvg
-            terminalMpv
-            (python3.withPackages (ps: [ ps.lottie ]))
-          ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-            pkgs.wl-clipboard
-            pkgs.xclip
-          ];
-          unwrapped = pkgs.rustPlatform.buildRustPackage {
-            pname = "telega";
+          mkUnwrapped = pname: pkgs.rustPlatform.buildRustPackage ({
+            inherit pname;
             version = "0.1.0";
-            TG_API_ID = credentials.TG_API_ID or "";
-            TG_API_HASH = credentials.TG_API_HASH or "";
+            cargoBuildFlags = [ "-p" pname ];
+            cargoTestFlags = [ "-p" pname ];
             src = builtins.path {
               name = "telega-source";
               path = ./.;
@@ -74,6 +31,11 @@
                 in relative == "Cargo.toml"
                   || relative == "build.rs"
                   || relative == "Cargo.lock"
+                  || relative == "crates"
+                  || relative == "crates/tgp-viewer"
+                  || pkgs.lib.hasPrefix "crates/tgp-viewer/" relative
+                  || relative == "tests"
+                  || pkgs.lib.hasPrefix "tests/" relative
                   || relative == "src"
                   || pkgs.lib.hasPrefix "src/" relative;
             };
@@ -90,12 +52,16 @@
             ];
             doCheck = true;
             meta = {
-              description = "Keyboard-first Telegram TUI with Kitty graphics media";
+              description = if pname == "telega" then "Telegram client for the terminal"
+                else "Terminal image and video viewer with Kitty graphics";
               license = pkgs.lib.licenses.gpl3Only;
-              mainProgram = "telega";
+              mainProgram = pname;
               platforms = systems;
             };
-          };
+          } // pkgs.lib.optionalAttrs (pname == "telega") {
+            TG_API_ID = credentials.TG_API_ID or "";
+            TG_API_HASH = credentials.TG_API_HASH or "";
+          });
           credentials = if builtins.pathExists ./api-credentials.env then
             builtins.listToAttrs (builtins.filter (entry: entry != null)
               (map (line:
@@ -106,29 +72,14 @@
                   else null)
                 (pkgs.lib.splitString "\n" (builtins.readFile ./api-credentials.env))))
             else {};
-          package = pkgs.symlinkJoin {
-            name = "telega-0.1.0";
-            paths = [ unwrapped ];
-            nativeBuildInputs = [ pkgs.makeWrapper ];
-            postBuild = ''
-              wrapProgram $out/bin/telega \
-                --set-default FONTCONFIG_FILE ${pkgs.makeFontsConf { fontDirectories = [ pkgs.dejavu_fonts ]; }} \
-                --prefix PATH : ${pkgs.lib.makeBinPath runtime}
-            '';
-            inherit (unwrapped) meta;
-          };
+          wrap = unwrapped: import ./nix/wrap.nix { inherit pkgs unwrapped; };
+          telega = mkUnwrapped "telega";
         in {
-          default = package;
-          telega = package;
-          telega-unwrapped = unwrapped;
+          default = wrap telega;
+          telega = wrap telega;
+          telega-unwrapped = telega;
+          tgp-viewer = wrap (mkUnwrapped "tgp-viewer");
         });
-
-      apps = forAllSystems (system: {
-        default = {
-          type = "app";
-          program = "${self.packages.${system}.default}/bin/telega";
-        };
-      });
 
       devShells = forAllSystems (system:
         let pkgs = import nixpkgs { inherit system; };

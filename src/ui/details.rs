@@ -165,7 +165,7 @@ impl App {
             self.start_audio_message(message.clone(), ratio);
             return;
         }
-        match media::InlinePlayback::new(self.telegram.client.clone(), message, false, true) {
+        match media::inline_playback(self.telegram.client.clone(), message, false, true) {
             Ok(mut playback) => {
                 if ratio > 0.0
                     && let Err(error) = playback.seek(ratio)
@@ -241,8 +241,7 @@ impl App {
                     .iter()
                     .find(|m| m.id() == placement.message_id && media::is_gif(m))
             {
-                match media::InlinePlayback::new(self.telegram.client.clone(), message, true, false)
-                {
+                match media::inline_playback(self.telegram.client.clone(), message, true, false) {
                     Ok(playback) => {
                         self.gifs.insert(placement.message_id, playback);
                     }

@@ -96,6 +96,7 @@ fn credential_value(
     local: &str,
 ) -> Option<String> {
     environment
+        .filter(|value| !value.trim().is_empty())
         .or_else(|| {
             embedded
                 .filter(|value| !value.trim().is_empty())
@@ -240,7 +241,8 @@ fn move_file(source: &Path, destination: &Path) -> Result<()> {
 fn print_help() {
     println!(
         "telega — terminal Telegram client\n\n\
-         Telegram application (optional when embedded at build time):\n  TG_API_ID       application id from my.telegram.org\n  \
+         Release builds include the Telegram application credentials.\n\n\
+         Optional application overrides:\n  TG_API_ID       application id from my.telegram.org\n  \
          TG_API_HASH     application hash; required only for a new login\n\n\
          Optional environment:\n  TELEGA_SESSION  session database path\n  \
          TELEGA_CACHE    storage root (default: ~/.cache/telega)\n  \
@@ -280,6 +282,10 @@ mod config_tests {
         assert_eq!(
             credential_value("TG_API_ID", None, Some("55"), local).as_deref(),
             Some("55")
+        );
+        assert_eq!(
+            credential_value("TG_API_HASH", Some(" ".into()), Some("embedded"), "").as_deref(),
+            Some("embedded")
         );
         assert!(credential_value("TG_API_ID", None, None, "# TG_API_ID=42\nOTHER=42").is_none());
     }

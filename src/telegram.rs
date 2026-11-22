@@ -227,7 +227,14 @@ impl Telegram {
             .client
             .request_login_code(phone.trim(), api_hash)
             .await
-            .context("Telegram did not accept the phone number")?;
+            .map_err(|error| {
+                let message = if error.is("API_ID_PUBLISHED_FLOOD") || error.is("API_ID_INVALID") {
+                    "Telegram rejected this build's application credentials. Check for an updated telega release or contact its maintainer."
+                } else {
+                    "Could not request a login code from Telegram"
+                };
+                anyhow::Error::new(error).context(message)
+            })?;
         let code = prompt("Code from Telegram: ")?;
         match self.client.sign_in(&token, code.trim()).await {
             Ok(_) => {}

@@ -1488,6 +1488,7 @@ dependencies = [
  "rpassword",
  "syntect",
  "terminalib",
+ "tgp-viewer",
  "tokio",
  "unicode-segmentation",
  "unicode-width",
@@ -1502,6 +1503,16 @@ dependencies = [
  "libc",
  "unicode-segmentation",
  "unicode-width",
+]
+
+[[package]]
+name = "tgp-viewer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "libc",
+ "terminalib",
+ "tokio",
 ]
 
 [[package]]
