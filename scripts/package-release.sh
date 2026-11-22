@@ -45,7 +45,7 @@ package() (
     if [ "$system" = aarch64-darwin ]; then
         otool -L "$stage/bin/$program" >"$stage/libraries"
         # Nix's Darwin SDK can link Apple's libiconv under its store path.
-        iconv=$(awk '$1 ~ /^\/nix\/store\/[^/]+-libiconv-[^/]+\/lib\/libiconv\.2\.dylib$/ {print $1}' "$stage/libraries")
+        iconv=$(awk '$1 ~ /^\/nix\/store\/[^\/]+-libiconv-[^\/]+\/lib\/libiconv\.2\.dylib$/ {print $1}' "$stage/libraries")
         if [ -n "$iconv" ]; then
             install_name_tool -change "$iconv" /usr/lib/libiconv.2.dylib "$stage/bin/$program"
             codesign -f -s - "$stage/bin/$program"
