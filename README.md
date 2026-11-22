@@ -110,12 +110,14 @@ tar -xzf telega-x86_64-linux.tar.gz
 
 `tgp-viewer` открывает локальные файлы в терминале и использует тот же код
 отрисовки и воспроизведения, что галерея telega. Для него не нужен аккаунт
-Telegram. Из этого репозитория:
+Telegram. Скачать архив можно из [релиза просмотрщика](https://github.com/acup1/telega/releases/tag/viewer-v0.1.0%2Bbuild.2).
+Для запуска через Nix:
 
 ```sh
-nix run .#tgp-viewer -- photo.jpg clip.mp4
+nix run 'https://github.com/acup1/telega/releases/download/viewer-v0.1.0%2Bbuild.2/tgp-viewer-nix.tar.gz' -- photo.jpg clip.mp4
 ```
 
+Из исходников используйте `nix run .#tgp-viewer -- photo.jpg clip.mp4`.
 В нативном архиве просмотрщика запускайте `./bin/tgp-viewer photo.jpg clip.mp4`.
 Стрелки ← и → переключают файлы, Esc закрывает просмотр. Для картинок и кадров
 видео нужен терминал с Kitty graphics protocol.
